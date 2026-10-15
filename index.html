@@ -10177,7 +10177,7 @@ const F={d:"รายการ",s:"S/N",a:"Asset No.",h:"HS Code",c:"COO",p:"ร
 let S={ship:{no:"CIPL-2026-001",date:new Date().toISOString().slice(0,10),fn:"MARINE INTEGRATED RESOURCES SDN BHD",from:"LOT 2544, KIDURONG GATEWAY,\nBINTULU, SARAWAK\nMalaysia 97000",tn:"Rovula (Thailand) Co., Ltd",to:"Mermaid Subsea Services Building A\n789/55 Moo 1, Pinthong Industrial Estate\nNongkham, Sriracha,\nChonburi 20230, Thailand.",sail:"",load:"Bangkok, TH",dis:"",note:"Temporary export - returnable"},asg:{},ov:{},ex:{},bx:{}};
 try{const x=localStorage.getItem("ciplv2");if(x)S=JSON.parse(x)}catch(e){}
 if(S.ship.fn===undefined){const f=(S.ship.from||"").split("\n"),t=(S.ship.to||"").split("\n");S.ship.fn=f.shift()||"";S.ship.from=f.join("\n");S.ship.tn=t.shift()||"";S.ship.to=t.join("\n")}
-let V="scan",cur=null,SM="";
+let V="scan",cur=S.cur||null,SM="";
 const e=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const save=()=>{try{localStorage.setItem("ciplv2",JSON.stringify(S))}catch(e){}};
 const base=id=>D.find(x=>x.i===id);
@@ -10186,8 +10186,8 @@ const inBox=b=>Object.keys(S.asg).filter(i=>S.asg[i]===b);
 const used=()=>BOXES.filter(b=>inBox(b).length||(S.ex[b]||[]).length);
 function toast(t){const d=document.createElement("div");d.className="t";d.textContent=t;document.body.append(d);setTimeout(()=>d.remove(),1600)}
 function go(v){V=v;render()}
-function scan(id){id=id.trim().toUpperCase();if(cur&&BOXES.includes(id)){SM="";put(id);return}if(BOXES.includes(id)){SM="สแกนอุปกรณ์ก่อน แล้วค่อยสแกน QR กล่อง";render();return}if(!base(id)){SM="ไม่พบรหัส \""+id+"\" ในระบบ";render();return}SM="";cur=id;render()}
-function put(b){S.asg[cur]=b;toast(cur+" → "+b);cur=null;save();render()}
+function scan(id){id=String(id).trim();const m=id.match(/[?&]i=([^&#]+)/);if(m)id=decodeURIComponent(m[1]);id=id.toUpperCase();if(cur&&BOXES.includes(id)){SM="";put(id);return}if(BOXES.includes(id)){SM="สแกนอุปกรณ์ก่อน แล้วค่อยสแกน QR กล่อง";render();return}if(!base(id)){SM="ไม่พบรหัส \""+id+"\" ในระบบ";render();return}SM="";cur=id;S.cur=id;save();render()}
+function put(b){S.asg[cur]=b;toast(cur+" → "+b);cur=null;S.cur=null;save();render()}
 function unput(i){delete S.asg[i];save();render()}
 function setOv(i,k,v){S.ov[i]=S.ov[i]||{};const o=base(i)[k]??(k==="q"?1:"");if(String(v)===String(o)){delete S.ov[i][k]}else S.ov[i][k]=(k==="p"||k==="q")?parseFloat(v)||0:v;save();render()}
 function reset(i){delete S.ov[i];save();render()}
@@ -10200,24 +10200,21 @@ if(dl)await dl.save({filename:fn,data:bl});else{const a=document.createElement("
 async function photo(f,inp){if(!f)return;SM="กำลังอ่านรูป...";render();let r=null;
 try{const b=await createImageBitmap(f);
 if("BarcodeDetector" in window){try{const q=await new BarcodeDetector({formats:["qr_code"]}).detect(b);if(q[0])r=q[0].rawValue}catch(z){}}
-const k=Math.min(1,3200/Math.max(b.width,b.height)),W=Math.round(b.width*k),H=Math.round(b.height*k),c=document.createElement("canvas");c.width=W;c.height=H;const x=c.getContext("2d",{willReadFrequently:true});x.drawImage(b,0,0,W,H);
+for(const M of [3200,1600,800]){if(r)break;const k=Math.min(1,M/Math.max(b.width,b.height)),W=Math.round(b.width*k),H=Math.round(b.height*k),c=document.createElement("canvas");c.width=W;c.height=H;const x=c.getContext("2d",{willReadFrequently:true});x.drawImage(b,0,0,W,H);
 for(const [fw,fh] of [[1,1],[.5,.25],[.5,1/6],[.34,.12]]){if(r)break;const w=Math.round(fw*W),h=Math.round(fh*H);
 for(let sy=0;sy<H&&!r;sy+=Math.max(1,Math.round(h/2)))for(let sx=0;sx<W&&!r;sx+=Math.max(1,Math.round(w/2))){const cw=Math.min(w,W-sx),ch=Math.min(h,H-sy);if(cw<80||ch<80)continue;const d=x.getImageData(sx,sy,cw,ch),q=jsQR(d.data,cw,ch);if(q)r=q.data}
-await new Promise(z=>setTimeout(z,0))}
+await new Promise(z=>setTimeout(z,0))}}
 }catch(e2){SM="เปิดรูปไม่ได้: "+(e2.message||e2);render();return}
 if(inp)inp.value="";
-if(r){toast("อ่านได้ "+r);scan(r)}else{SM="อ่าน QR ไม่ได้ ลองถ่ายใหม่ให้เห็น QR ใบเดียวเต็มเฟรม ไม่เอียง แสงพอ หรือกดเลือกรูปที่ซูม QR ไว้";render()}}
+if(r){toast("อ่านได้");scan(r)}else{SM="อ่าน QR ไม่ได้ แนะนำให้ใช้กล้องมือถือสแกนตรงๆ หรือถ่ายให้เห็น QR ใบเดียวเต็มเฟรม";render()}}
 function setSh(k,v){S.ship[k]=v;save()}
-async function cam(){if(!("BarcodeDetector" in window)){toast("เบราว์เซอร์นี้ไม่รองรับกล้อง พิมพ์รหัสแทน");return}
-const v=document.getElementById("v");v.style.display="block";
-try{const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});v.srcObject=s;await v.play();
-const bd=new BarcodeDetector({formats:["qr_code"]});const t=setInterval(async()=>{const r=await bd.detect(v);if(r[0]){clearInterval(t);s.getTracks().forEach(x=>x.stop());v.style.display="none";scan(r[0].rawValue)}},400)}catch(x){toast("เปิดกล้องไม่ได้");v.style.display="none"}}
+function pbtn(t){const s="display:inline-block;padding:9px 14px;border-radius:8px;";return`<label style="${s}background:var(--ac);color:var(--bg);font-weight:600">${t}<input type=file accept="image/*" capture=environment hidden onchange="photo(this.files[0],this)"></label> <label style="${s}border:1px solid var(--ac);color:var(--ac)">เลือกรูป<input type=file accept="image/*" hidden onchange="photo(this.files[0],this)"></label>`}
 function vScan(){let h="<h1>สแกนอุปกรณ์</h1><p class=mu>สแกน QR ของอุปกรณ์ แล้วเลือกกล่องที่ใส่</p>"+(SM?"<div class=wn>"+e(SM)+"</div>":"");
 if(cur){const it=get(cur),a=S.asg[cur],hb=BOXES[base(cur).b-1];
 h+=`<div class=c><b>${e(cur)}</b> ${e(it.d)}<div class=mu>S/N ${e(it.s)} · Asset ${e(it.a||"-")}</div>${a?`<div class=wn>อยู่ใน ${a} แล้ว เลือกใหม่เพื่อย้าย</div>`:""}</div>
-<p class=mu>ใส่กล่องไหน (กล่องประจำ: ${hb}) แตะเลือก หรือสแกน QR กล่อง</p><div class=g>${BOXES.map(b=>`<button class="${b===hb?"h":""} ${b===a?"cur":""}" onclick="put('${b}')">${b.slice(4)}</button>`).join("")}</div>
-<p><button class=s onclick="put('SELF-'+cur)">ใช้กล่องของอุปกรณ์เอง</button> <button class=s onclick="cur=null;render()">ยกเลิก</button></p>`}
-else h+=`<div class=c><div class=r><input id=q placeholder="พิมพ์รหัส เช่น ITM-0005" onkeydown="event.key=='Enter'&&scan(this.value)"><button class="p f" onclick="scan(q.value)">ค้นหา</button></div><p><label style="display:inline-block;padding:9px 14px;border-radius:8px;background:var(--ac);color:var(--bg);font-weight:600">ถ่ายรูป QR<input type=file accept="image/*" capture=environment hidden onchange="photo(this.files[0],this)"></label> <label style="display:inline-block;padding:9px 14px;border-radius:8px;border:1px solid var(--ac);color:var(--ac)">เลือกรูป<input type=file accept="image/*" hidden onchange="photo(this.files[0],this)"></label> <button class=s onclick="cam()">สแกนสด (ถ้ากล้องเปิดได้)</button></p><video id=v playsinline style="display:none;width:100%;border-radius:8px"></video></div>
+<p>${pbtn("ถ่ายรูป QR กล่อง")}</p><p class=mu>หรือแตะเลือกกล่อง (กล่องประจำ: ${hb})</p><div class=g>${BOXES.map(b=>`<button class="${b===hb?"h":""} ${b===a?"cur":""}" onclick="put('${b}')">${b.slice(4)}</button>`).join("")}</div>
+<p><button class=s onclick="put('SELF-'+cur)">ใช้กล่องของอุปกรณ์เอง</button> <button class=s onclick="cur=S.cur=null;save();render()">ยกเลิก</button></p>`}
+else h+=`<div class=c><div class=r><input id=q placeholder="พิมพ์รหัส เช่น ITM-0005" onkeydown="event.key=='Enter'&&scan(this.value)"><button class="p f" onclick="scan(q.value)">ค้นหา</button></div><p>${pbtn("ถ่ายรูป QR อุปกรณ์")}</p></div>
 <h2>จำลองการสแกน</h2><div class=chips>${D.map(x=>`<button onclick="scan('${x.i}')">${x.i.slice(4)} ${e(x.d.slice(0,14))}${S.asg[x.i]?" ✓":""}</button>`).join("")}</div>
 <p class=mu>แพ็คแล้ว ${Object.keys(S.asg).length}/${D.length} ชิ้น</p>`;return h}
 function vBox(){const u=used();let h="<h1>กล่อง</h1><p class=mu>เพิ่มรายการเอง น้ำหนัก และขนาดของแต่ละกล่อง</p>";
@@ -10256,4 +10253,5 @@ function render(){const T=[["scan","📷","สแกน"],["box","📦","กล�
 document.getElementById("n").innerHTML=T.map(t=>`<button class="${V===t[0]?"on":""}" onclick="go('${t[0]}')"><b>${t[1]}</b>${t[2]}</button>`).join("");
 document.getElementById("m").innerHTML=({scan:vScan,box:vBox,item:vItem,price:vPrice,ship:vShip,out:vOut})[V]();scrollTo(0,0)}
 render();
+{const q=new URLSearchParams(location.search).get("i");if(q){try{history.replaceState(null,"",location.pathname)}catch(z){}scan(q)}}
 </script></body></html>
